@@ -19,12 +19,12 @@ public with sharing class webServiceUtility
 		    list<SObject> records = Database.query(dynQuery);
 		    
 		    //serialize records
-		    return serializeRecords(records);	        
+		    return serializeRecords(basicInfo, records);	        
 		 }
 		 catch(Exception ex)
-		 {          
-		    return getErrorJson(ex.getMessage());
-		 }
+		 {          		 	
+		   return getErrorJson(ex.getMessage());
+		 }		
 	}
     
     /**
@@ -55,7 +55,7 @@ public with sharing class webServiceUtility
         String dynQuery = string.format('SELECT {0} FROM {1}', new list<string>{basicInfo.fieldList, basicInfo.name});
 
         //add where clause   
-        if(!isNullOrBlank(WhereClause)) dynQuery = string.format('{0} WHERE {1}', new list<string>{dynQuery, whereClause});
+        if(!isNullOrBlank(WhereClause)) dynQuery = string.format('{0} WHERE {1}', new string[]{dynQuery, whereClause});
         
         return dynQuery;
     }
@@ -65,10 +65,11 @@ public with sharing class webServiceUtility
     *@param      : list<sObject> records
     *@Description: serialize sObject records into JSON
     **/
-    private static string serializeRecords(list<sObject> records)
+    private static string serializeRecords(sObjectBasicInfo basicInfo, list<sObject> records)
     {
-    	String recordsJson = JSON.serialize(records);    	
-    	return recordsJson;
+    	String recordsJson = JSON.serialize(records);
+    	String formattedJson = '[{"message":"success","totalSize":"'+ string.valueOf(records.size()) + '","' + basicInfo.name + '":' + recordsJson + '}]';    	
+    	return formattedJson;
     }
      
      /**
@@ -78,7 +79,7 @@ public with sharing class webServiceUtility
     **/
     private static string getErrorJson(String errorMsg)
     {
-    	return string.format('[{"message":"error : {0}"}]', new string[]{errorMsg});	
+    	return '[{"message":"Error Occurred -' + errorMsg + '"}]';
     }
     
     /**
@@ -100,5 +101,5 @@ public with sharing class webServiceUtility
     		this.name = name;
     		this.fieldList = fieldList;	
     	}	
-    }
+    } 
 }

@@ -26,9 +26,7 @@ private class Test_webServiceUtility {
     {
     	Account objAccount = new Account(Name='Test-Account-01');
     	insert objAccount;
-   		String str = webServiceUtility.getRecords('Account', 'parentId = Null limit 1');
-   		str = str.subString(1, str.length()-1);
-   		Map<String, Object> mapJson = (Map<String, Object>)JSON.deserializeUntyped(str);
-   		system.assertEquals(mapJson.get('Name'), 'Test-Account-01');
+   		String response = webServiceUtility.getRecords(Account.sObjectType, 'parentId = Null limit 1');   
+   		System.assert(response.contains('Test-Account-01'));
    	}
 }
