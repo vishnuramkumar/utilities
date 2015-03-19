@@ -5,50 +5,82 @@ public with sharing class webServiceUtility
     *@param      : String sObjectName, String whereClause
     *@Description: To Query all the fields of a specified sObject and serialize the data
     **/
-    public static string getRecords(String sObjectName, String whereClause)
+    public static string getRecords(Schema.SobjectType sObjectVar, String whereClause)
     {           
-        string errorFormat = '[{"Error": "{0}"}]';
-        
-        if(isNullOrBlank(sObjectName) || isNullOrBlank(whereClause)) return string.format(errorFormat, new list<string>{'Insufficient Parameters'});      
-         
-        //get meta info of all objects from the Org.
-        Map <String, Schema.SObjectType> schemaMap = Schema.getGlobalDescribe();
-
-        //describe the fields of a particular Sobject
-        Map <String, Schema.SObjectField> fieldMap = schemaMap.get(sObjectName).getDescribe().fields.getMap();
-      
-        String strFields = '';
-
-        //create comma seperated string of field api names
-        for(String strFieldsInd : fieldMap.keySet())
-        {
-            strFields += strFieldsInd +', ';
-        }
-
-        //remove the trailing ',' 
-        strFields = strFields.substring(strFields.length()-2, strFields.length()) == ', ' ? strFields.subString(0, strFields.length()-2) : strFields;
-        
-        //Form the basic query
-        String strQuery = string.format('SELECT {0} FROM {1}', new list<string>{strFields, sObjectName});
+		try
+		{
+	        //get fields list 
+	        sObjectSimpleWrapper sObjectInfo = getFieldsList(sObjectVar);
+	        
+	        //build SOQL
+	        String sObjectName = sObjectInfo.name;
+	        String fieldList = sObjectInfo.fieldList;
+	        String dynQuery = buildSOQL(sObjectName, fieldList, whereClause);
+	        
+	        //excute SOQL
+	        list<SObject> records = Database.query(dynQuery);
+	        
+	        //serialize records
+	        return serializeRecords(records);	        
+		 }
+	     catch(Exception ex)
+	     {          
+	        return getErrorJson(ex.getMessage());
+	     }
+    }
+    
+    /**
+    *@MethodName : getFieldsList 
+    *@param      : Schema.SobjectType sObjectVar
+    *@Description: get sObject info like it's name and fields.
+    **/
+    private static sObjectSimpleWrapper getFieldsList(Schema.SobjectType sObjectVar)
+    {    	
+    	Schema.DescribeSObjectResult dsr = sObjectVar.getDescribe();
+    	String sObjectName = dsr.getName();
+    	Map <String, Schema.SObjectField> fieldMap = dsr.fields.getMap();
+       	list<String> lstFields = new list<String>();
+        lstFields.addAll(fieldMap.keySet());
+        String fieldList = String.join(lstFields,',');
+        sObjectSimpleWrapper sObjectInfoInstance = new sObjectSimpleWrapper(sObjectName, fieldList); 
+        return sObjectInfoInstance;
+    }
+    
+    /**
+    *@MethodName : buildSOQL 
+    *@param      : String sObjectName, String fieldList, String whereClause
+    *@Description: build SOQL string
+    **/
+    private static string buildSOQL(String sObjectName, String fieldList, String whereClause)
+    {
+    	 //Form the basic query
+        String dynQuery = string.format('SELECT {0} FROM {1}', new list<string>{fieldList, sObjectName});
 
         //add where clause   
-        if(!isNullOrBlank(WhereClause)) strQuery = string.format('{0} WHERE {1}', new list<string>{strQuery, whereClause});
+        if(!isNullOrBlank(WhereClause)) dynQuery = string.format('{0} WHERE {1}', new list<string>{dynQuery, whereClause});
         
-        String strJSONToReturn = '';
-        try
-        {
-            List<SObject> lstSobjectRecords = Database.query(strQuery);
-            strJSONToReturn = JSON.serializePretty(lstSobjectRecords);         
-        }
-        catch(JsonException jsonEx)
-        {
-            strJSONToReturn = string.format(errorFormat, new list<string>{jsonEx.getMessage()});
-        } 
-        catch(Exception ex)
-        {
-            strJSONToReturn = string.format(errorFormat, new list<string>{ex.getMessage()});
-        }          
-        return strJSONToReturn;
+        return dynQuery;
+    }
+    
+     /**
+    *@MethodName : serializeRecords 
+    *@param      : list<sObject> records
+    *@Description: serialize sObject records into JSON
+    **/
+    private static string serializeRecords(list<sObject> records)
+    {
+    	String recordsJson = JSON.serialize(records);    	
+    	return recordsJson;
+    }
+     
+     /**
+    *@MethodName : getErrorJson 
+    *@param      : String errorMsg
+    *@Description: send JSON error Msg
+    **/
+    private static string getErrorJson(String errorMsg)
+    {
+    	return string.format('[{"message":"error : {0}"}]', new string[]{errorMsg});	
     }
     
     /**
@@ -59,5 +91,16 @@ public with sharing class webServiceUtility
     private static boolean isNullOrBlank(String value)
     {
         return (value == NULL || value.trim() == '');
+    }
+        
+    private class sObjectSimpleWrapper
+    {
+    	String name, fieldList;
+    	
+    	public  sObjectSimpleWrapper(String name, String fieldList)
+    	{
+    		this.name = name;
+    		this.fieldList = fieldList;	
+    	}	
     }
 }
