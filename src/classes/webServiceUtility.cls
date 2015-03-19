@@ -5,15 +5,15 @@ public with sharing class webServiceUtility
     *@param      : String sObjectName, String whereClause
     *@Description: To Query all the fields of a specified sObject and serialize the data
     **/
-    public static string getRecords(Schema.SobjectType sObjectVar, String whereClause)
-    {           
+	public static string getRecords(Schema.SobjectType sObjectVar, String whereClause)
+	{           
 		try
 		{
 		    //get fields list 
-		    sObjectBasicInfo sObjectInfo = getFieldsList(sObjectVar);
+		    sObjectBasicInfo basicInfo = getSObjectBasicInfo(sObjectVar);
 		    
 		    //build SOQL		   
-		    String dynQuery = buildSOQL(sObjectInfo, whereClause);
+		    String dynQuery = buildSOQL(basicInfo, whereClause);
 		    
 		    //excute SOQL
 		    list<SObject> records = Database.query(dynQuery);
@@ -25,14 +25,14 @@ public with sharing class webServiceUtility
 		 {          
 		    return getErrorJson(ex.getMessage());
 		 }
-    }
+	}
     
     /**
     *@MethodName : getFieldsList 
     *@param      : Schema.SobjectType sObjectVar
     *@Description: get sObject info like it's name and fields.
     **/
-    private static sObjectBasicInfo getFieldsList(Schema.SobjectType sObjectVar)
+    private static sObjectBasicInfo getSObjectBasicInfo(Schema.SobjectType sObjectVar)
     {    	    	
     	Schema.DescribeSObjectResult dsr = sObjectVar.getDescribe();
     	String sObjectName = dsr.getName();
