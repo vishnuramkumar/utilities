@@ -9,24 +9,22 @@ public with sharing class webServiceUtility
     {           
 		try
 		{
-	        //get fields list 
-	        sObjectSimpleWrapper sObjectInfo = getFieldsList(sObjectVar);
-	        
-	        //build SOQL
-	        String sObjectName = sObjectInfo.name;
-	        String fieldList = sObjectInfo.fieldList;
-	        String dynQuery = buildSOQL(sObjectName, fieldList, whereClause);
-	        
-	        //excute SOQL
-	        list<SObject> records = Database.query(dynQuery);
-	        
-	        //serialize records
-	        return serializeRecords(records);	        
+		    //get fields list 
+		    sObjectBasicInfo sObjectInfo = getFieldsList(sObjectVar);
+		    
+		    //build SOQL		   
+		    String dynQuery = buildSOQL(sObjectInfo, whereClause);
+		    
+		    //excute SOQL
+		    list<SObject> records = Database.query(dynQuery);
+		    
+		    //serialize records
+		    return serializeRecords(records);	        
 		 }
-	     catch(Exception ex)
-	     {          
-	        return getErrorJson(ex.getMessage());
-	     }
+		 catch(Exception ex)
+		 {          
+		    return getErrorJson(ex.getMessage());
+		 }
     }
     
     /**
@@ -34,15 +32,15 @@ public with sharing class webServiceUtility
     *@param      : Schema.SobjectType sObjectVar
     *@Description: get sObject info like it's name and fields.
     **/
-    private static sObjectSimpleWrapper getFieldsList(Schema.SobjectType sObjectVar)
-    {    	
+    private static sObjectBasicInfo getFieldsList(Schema.SobjectType sObjectVar)
+    {    	    	
     	Schema.DescribeSObjectResult dsr = sObjectVar.getDescribe();
     	String sObjectName = dsr.getName();
     	Map <String, Schema.SObjectField> fieldMap = dsr.fields.getMap();
        	list<String> lstFields = new list<String>();
         lstFields.addAll(fieldMap.keySet());
         String fieldList = String.join(lstFields,',');
-        sObjectSimpleWrapper sObjectInfoInstance = new sObjectSimpleWrapper(sObjectName, fieldList); 
+        sObjectBasicInfo sObjectInfoInstance = new sObjectBasicInfo(sObjectName, fieldList); 
         return sObjectInfoInstance;
     }
     
@@ -51,10 +49,10 @@ public with sharing class webServiceUtility
     *@param      : String sObjectName, String fieldList, String whereClause
     *@Description: build SOQL string
     **/
-    private static string buildSOQL(String sObjectName, String fieldList, String whereClause)
+    private static string buildSOQL(sObjectBasicInfo basicInfo, String whereClause)
     {
     	 //Form the basic query
-        String dynQuery = string.format('SELECT {0} FROM {1}', new list<string>{fieldList, sObjectName});
+        String dynQuery = string.format('SELECT {0} FROM {1}', new list<string>{basicInfo.fieldList, basicInfo.name});
 
         //add where clause   
         if(!isNullOrBlank(WhereClause)) dynQuery = string.format('{0} WHERE {1}', new list<string>{dynQuery, whereClause});
@@ -93,11 +91,11 @@ public with sharing class webServiceUtility
         return (value == NULL || value.trim() == '');
     }
         
-    private class sObjectSimpleWrapper
+    private class sObjectBasicInfo
     {
     	String name, fieldList;
     	
-    	public  sObjectSimpleWrapper(String name, String fieldList)
+    	public  sObjectBasicInfo(String name, String fieldList)
     	{
     		this.name = name;
     		this.fieldList = fieldList;	
